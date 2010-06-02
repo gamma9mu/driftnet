@@ -30,7 +30,7 @@ CFLAGS += -I/usr/include/pcap
 CFLAGS += -D_BSD_SOURCE
 
 # We always need the pcap and pthread libraries.
-LDLIBS += -lpcap -lpthread #-lefence
+LDLIBS += -lpcap -lpthread `pkg-config --libs libpng` #-lefence
 
 # Optional C compiler and linker flags. Typical driftnet builds have support
 # for displaying captured images in an X window, and need the following flags:
