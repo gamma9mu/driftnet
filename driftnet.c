@@ -585,6 +585,23 @@ int main(int argc, char *argv[]) {
                 return 1;
         }
     }
+
+    /* Create a pid file if running in adjunct */
+    if (adjunct) {
+        int fd = open(PIDFILE, O_WRONLY|O_CREAT|O_EXCL,
+            S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+        if (fd < 0 && errno == EEXIST) {
+            fprintf(stderr, PROGNAME": pid file \"%s\" exists.  Please"
+                " close other adjunct\ndriftnets or remove the file is none "
+                "are running.\n", PIDFILE);
+            return -1;
+        }
+        pid_t p = getpid();
+        char pid[20];
+        snprintf(pid, 20, "%u", p);
+        write( fd, pid, strlen(pid));
+        close(fd);
+    }
     
 #ifdef NO_DISPLAY_WINDOW
     if (!adjunct) {
@@ -805,6 +822,8 @@ int main(int argc, char *argv[]) {
     xfree(slots);
  //   if (!tmpdir_specified)
  //	xfree(tmpdir);
-
+    
+    /* Kill a PID file if we made one */
+    if (adjunct) unlink(PIDFILE);
     return 0;
 }
