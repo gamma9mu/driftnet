@@ -55,9 +55,6 @@ int max_tmpfiles;
 
 enum mediatype extract_type = m_image;
 
-/* ugh. */
-pcap_t *pc;
-
 #ifndef NO_DISPLAY_WINDOW
 /* PID of display child and file descriptor on pipe to same. */
 pid_t dpychld;
@@ -72,7 +69,7 @@ void do_mpeg_player(void);
 
 /* clean_temporary_directory:
  * Ensure that our temporary directory is clear of any files. */
-void clean_temporary_directory(void) {
+void clean_temporary_directory(const char *tmpdir) {
     DIR *d;
     
     /* If in adjunct mode, do not delete any temporary files */
@@ -108,7 +105,7 @@ void clean_temporary_directory(void) {
 
 
     if (!tmpdir_specified && rmdir(tmpdir) == -1 && errno != ENOENT) /* lame attempt to avoid race */
-        fprintf(stderr, PROGNAME": rmdir(%s): %s\n", tmpdir, strerror(errno));
+        fprintf(stderr, PROGNAME": rmtmpdir(%s): %s\n", tmpdir, strerror(errno));
 }
 
 /* alloc_connection:
@@ -472,6 +469,7 @@ void process_packet(u_char *user, const struct pcap_pkthdr *hdr, const u_char *p
 /* packet_capture_thread:
  * Thread in which packet capture runs. */
 void *packet_capture_thread(void *v) {
+    pcap_t *pc = (pcap_t *) v;
     while (!foad)
         pcap_dispatch(pc, -1, process_packet, NULL);
     return NULL;
@@ -480,11 +478,12 @@ void *packet_capture_thread(void *v) {
 /* main:
  * Entry point. Process command line options, start up pcap and enter capture
  * loop. */
-char optstring[] = "abd:f:hi:M:m:pSsvx:";
-
 int main(int argc, char *argv[]) {
+    char optstring[] = "abd:f:hi:M:m:pSsvx:";
     char *interface = NULL, *filterexpr;
     int promisc = 1;
+
+    pcap_t *pc;
     struct bpf_program filter;
     char ebuf[PCAP_ERRBUF_SIZE];
     int c;
@@ -788,7 +787,7 @@ int main(int argc, char *argv[]) {
     /* Actually start the capture stuff up. Unfortunately, on many platforms,
      * libpcap doesn't have read timeouts, so we start the thing up in a
      * separate thread. Yay! */
-    pthread_create(&packetth, NULL, packet_capture_thread, NULL);
+    pthread_create(&packetth, NULL, packet_capture_thread, (void*)pc);
 
     while (!foad)
         sleep(1);
@@ -814,9 +813,12 @@ int main(int argc, char *argv[]) {
     pthread_join(packetth, NULL);
     
     /* Clean up. */
-/*    pcap_freecode(pc, &filter);*/ /* not on some systems... */
+    /* According to pcap/pcap.h on my system, this exists.  If this line
+     * "pcap_freecode(&filter);" fails to compile for you, PLEASE let me
+     * know. -bag */
+    pcap_freecode(&filter); 
     pcap_close(pc);
-    clean_temporary_directory();
+    clean_temporary_directory(tmpdir);
 
     /* Easier for memory-leak debugging if we deallocate all this here.... */
     for (C = slots; C < slots + slotsalloc; ++C)
