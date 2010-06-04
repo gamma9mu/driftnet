@@ -105,7 +105,7 @@ void clean_temporary_directory(const char *tmpdir) {
 
 
     if (!tmpdir_specified && rmdir(tmpdir) == -1 && errno != ENOENT) /* lame attempt to avoid race */
-        fprintf(stderr, PROGNAME": rmtmpdir(%s): %s\n", tmpdir, strerror(errno));
+        fprintf(stderr, PROGNAME": rmdir(%s): %s\n", tmpdir, strerror(errno));
 }
 
 /* alloc_connection:
