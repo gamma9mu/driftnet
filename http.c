@@ -43,7 +43,8 @@ unsigned char *find_http_req(const unsigned char *data, const size_t len, unsign
         return (unsigned char*)data;
     
     if (!(req = memstr(data, len, (unsigned char*) "GET ", 4)))
-        return (unsigned char*)(data + len - 4);
+         if(!(req = memstr(data, len, (unsigned char*) "POST ", 5)))
+             return (unsigned char*)(data + len - 4);
 
     /* Find the end of the request line. */
     if (!(le = memstr(req + 4, remaining(req + 4), (unsigned char*) "\r\n", 2))) {
@@ -57,7 +58,7 @@ unsigned char *find_http_req(const unsigned char *data, const size_t len, unsign
     if (le < req + 5)
         return le + 2;
 
-    /* Not an HTTP request, just a line starting GET.... */
+    /* Not an HTTP request, just a line starting {GET,POST}.... */
     if (memcmp(le - 9, " HTTP/1.", 8) || !strchr("01", (int)*(le - 1)))
         return le + 2;
 
@@ -69,7 +70,8 @@ unsigned char *find_http_req(const unsigned char *data, const size_t len, unsign
             return req;
     }
 
-    if (memcmp(req + 4, "http://", 7) == 0)
+    if (memcmp(req + 4, "http://", 7) == 0
+        && memcmp(req + 5, "http://", 7) == 0)
         /* Probably a cache request; in any case, don't need to look for a Host:. */
         goto found;
 
