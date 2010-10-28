@@ -247,6 +247,12 @@ int get_link_level_hdr_length(int type)
         case DLT_IEEE802_11:
             return 32; /* 20030606 email from Nikhil Bobb */ /*44; */
 #endif
+
+#ifdef DLT_IEEE802_11_RADIO           /* 802.11 radiotap */
+        case DLT_IEEE802_11_RADIO:
+            return 0x38;
+#endif
+
             
         default:;
     }
