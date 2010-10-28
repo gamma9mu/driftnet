@@ -13,6 +13,14 @@
 
 #include "img.h"
 
+/* This function got renamed.  Make a clumsy #define if we notice that we're on
+ * the newer version of the library.  Something that would be handled by
+ * autotools, cough cough...
+ */
+#ifndef png_set_gray_1_2_4_to_8
+#define png_set_gray_1_2_4_to_8 png_set_expand_gray_1_2_4_to_8
+#endif
+
 static const char rcsid[] = "$Id: png.c,v 1.4 2003/08/25 12:23:43 chris Exp $";
 
 int png_load_hdr(img I) {
