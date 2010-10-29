@@ -386,6 +386,9 @@ void process_packet(u_char *user, const struct pcap_pkthdr *hdr, const u_char *p
     if (verbose)
         fprintf(stderr, ".");
 
+    /* XXX: This makes us only support radiotap for now */
+    pkt_offset = 32 + (pkt[2] | pkt[3] << 8);
+
     memcpy(&ip, pkt + pkt_offset, sizeof(ip));
     memcpy(&s, &ip.ip_src, sizeof(ip.ip_src));
     memcpy(&d, &ip.ip_dst, sizeof(ip.ip_dst));
