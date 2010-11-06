@@ -247,7 +247,7 @@ int get_link_level_hdr_length(int type)
 
 #ifdef DLT_IEEE802_11_RADIO           /* 802.11 radiotap */
         case DLT_IEEE802_11_RADIO:
-            return 0x38;
+            return 0; /* We return anything; This is calculated per packet. */
 #endif
 
             
@@ -383,8 +383,17 @@ void process_packet(u_char *user, const struct pcap_pkthdr *hdr, const u_char *p
     if (verbose)
         fprintf(stderr, ".");
 
-    /* XXX: This makes us only support radiotap for now */
-    pkt_offset = 32 + (pkt[2] | pkt[3] << 8);
+    /* This is a butchered form of the magic that happens in libpcap's
+     * gencode.c functions.  It was the best reference I could find, and I'm
+     *  still fairly certain I missed something */
+    if(pcap_datalink(pc) == DLT_IEEE802_11_RADIO) {
+        pkt_offset = (pkt[2] | pkt[3] << 8); // radiotap length
+        if(pkt[pkt_offset] & 0x80)
+		pkt_offset += 2; // If QoS bit set, add 2
+        pkt_offset += 24; // minimum length of MAC header
+        
+        pkt_offset += 8; // LLC_SNAP header
+    }
 
     memcpy(&ip, pkt + pkt_offset, sizeof(ip));
     memcpy(&s, &ip.ip_src, sizeof(ip.ip_src));
