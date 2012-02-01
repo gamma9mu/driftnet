@@ -516,15 +516,6 @@ int main(int argc, char *argv[]) {
     pthread_t packetth;
     connection *C;
 
-#ifdef NO_DISPLAY_WINDOW
-    if (!adjunct) {
-        fprintf(stderr, PROGNAME": this version of driftnet was compiled without display support\n");
-        fprintf(stderr, PROGNAME": use the -a option to run it in adjunct mode\n");
-        fprintf(stderr, PROGNAME": assuming you meant to include this...\n");
-        adjunct = 1;
-    }
-#endif /* !NO_DISPLAY_WINDOW */
-
     /* Handle command-line options. */
     opterr = 0;
     while ((c = getopt(argc, argv, optstring)) != -1) {
@@ -611,6 +602,17 @@ int main(int argc, char *argv[]) {
                 return 1;
         }
     }
+
+
+#ifdef NO_DISPLAY_WINDOW
+    if (!adjunct) {
+        fprintf(stderr, PROGNAME": this version of driftnet was compiled without display support\n");
+        fprintf(stderr, PROGNAME": use the -a option to run it in adjunct mode\n");
+        fprintf(stderr, PROGNAME": assuming you meant to include this...\n");
+        adjunct = 1;
+    }
+#endif /* !NO_DISPLAY_WINDOW */
+
 
     /* Create a pid file if running in adjunct */
     if (adjunct) {
