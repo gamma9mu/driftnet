@@ -181,8 +181,10 @@ void dump_data(FILE *fp, const unsigned char *data, const unsigned int len) {
  * don't know why libpcap doesn't expose the information directly. The
  * constants here are taken from 0.6.2, but I've added #ifdefs in the hope
  * that it will still compile with earlier versions. */
-int get_link_level_hdr_length(int type)
+int get_link_level_hdr_length(int type, const u_char *pkt, const unsigned int len)
 {
+    int pkt_offset;
+
     switch (type) {
         case DLT_EN10MB:
             return 14;
@@ -247,7 +249,30 @@ int get_link_level_hdr_length(int type)
 
 #ifdef DLT_IEEE802_11_RADIO           /* 802.11 radiotap */
         case DLT_IEEE802_11_RADIO:
-            return 0; /* We return anything; This is calculated per packet. */
+            if(pkt == NULL) /* For the startup check */
+                return 0;
+            /* This is a butchered form of the magic that happens in libpcap's
+             * gencode.c functions.  It was the best reference I could find,
+             * and I'm still fairly certain I missed something */
+            if(len < 4) {
+                fprintf(stderr, PROGNAME": radiotap packet under length(<4)");
+                exit(1);
+            }
+            pkt_offset = (pkt[2] | pkt[3] << 8); // radiotap length
+            if(len < pkt_offset + 1) {
+                fprintf(stderr, PROGNAME": radiotap header specifies header length greater than packet (%d < %d)", len, pkt_offset + 1);
+                exit(1);
+            }
+            if(pkt[pkt_offset] & 0x80)
+                pkt_offset += 2; // If QoS bit set, add 2
+            pkt_offset += 24; // minimum length of MAC header
+            pkt_offset += 8; // LLC_SNAP header
+
+            if(len < pkt_offset + 1) {
+                fprintf(stderr, PROGNAME": radiotap header specifies header length greater than packet (%d < %d)", len, pkt_offset + 1);
+                exit(1);
+            }
+            return pkt_offset;
 #endif
 
             
@@ -371,29 +396,19 @@ char *connection_string(const struct in_addr s, const unsigned short s_port, con
 
 /* process_packet:
  * Callback which processes a packet captured by libpcap. */
-int pkt_offset; /* offset of IP packet within wire packet */
-
+int datalink; /* The datalink type.  Needed for removing headers */
 void process_packet(u_char *user, const struct pcap_pkthdr *hdr, const u_char *pkt) {
     struct ip ip;
     struct tcphdr tcp;
     struct in_addr s, d;
     int off, len, delta;
     connection *C, c;
+    int pkt_offset;
 
     if (verbose)
         fprintf(stderr, ".");
 
-    /* This is a butchered form of the magic that happens in libpcap's
-     * gencode.c functions.  It was the best reference I could find, and I'm
-     *  still fairly certain I missed something */
-    if(pcap_datalink(pc) == DLT_IEEE802_11_RADIO) {
-        pkt_offset = (pkt[2] | pkt[3] << 8); // radiotap length
-        if(pkt[pkt_offset] & 0x80)
-		pkt_offset += 2; // If QoS bit set, add 2
-        pkt_offset += 24; // minimum length of MAC header
-        
-        pkt_offset += 8; // LLC_SNAP header
-    }
+    pkt_offset = get_link_level_hdr_length(datalink, pkt, hdr->caplen);
 
     memcpy(&ip, pkt + pkt_offset, sizeof(ip));
     memcpy(&s, &ip.ip_src, sizeof(ip.ip_src));
@@ -799,11 +814,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    /* Figure out the offset from the start of a returned packet to the data in
-     * it. */
-    pkt_offset = get_link_level_hdr_length(pcap_datalink(pc));
-    if (verbose)
-        fprintf(stderr, PROGNAME": link-level header length is %d bytes\n", pkt_offset);
+    /* Save the datalink type for figuring out the header length later */
+    datalink = pcap_datalink(pc);
+    /* Try get_link_level_hdr_length to check if we can handle this type */
+    get_link_level_hdr_length(datalink, NULL, 0);
 
     slotsused = 0;
     slotsalloc = 64;
