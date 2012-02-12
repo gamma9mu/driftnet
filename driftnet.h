@@ -69,6 +69,7 @@ typedef struct _connection {
 } *connection;
 
 /* driftnet.c */
+#define PIDFILE "/var/run/driftnet.pid"
 char *connection_string(const struct in_addr s, const unsigned short s_port, const struct in_addr d, const unsigned short d_port);
 void dump_data(FILE *fp, const unsigned char *data, const unsigned int len);
 
