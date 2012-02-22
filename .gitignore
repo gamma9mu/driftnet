@@ -1,3 +1,4 @@
 *.o
 driftnet
 driftnet.1
+check_driftnet

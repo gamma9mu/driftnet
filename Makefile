@@ -74,6 +74,10 @@ BINS = driftnet
 
 OBJS = $(SRCS:.c=.o)
 
+# main src files which should be included when running check tests. NB. This isn't the test code itself.
+TEST_SRCS = util.c http.c
+TEST_OBJS = $(TEST_SRCS:.c=.o)
+
 default: driftnet driftnet.1
 
 driftnet:   $(OBJS)
@@ -97,4 +101,8 @@ tarball: $(SRCS) $(HDRS) $(TXTS)
 	rm -rf driftnet-$(VERSION)
 	mv driftnet-$(VERSION).tar.gz ..
 	
+check: $(TEST_OBJS)
+	$(CC) -o check_driftnet tests/check_http.c $(TEST_OBJS) $(LDFLAGS) $(LDLIBS) -lcheck
+	./check_driftnet
+
 # DO NOT DELETE
