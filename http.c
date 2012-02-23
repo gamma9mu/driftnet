@@ -28,7 +28,7 @@ static const char rcsid[] = "$Id: http.c,v 1.1 2003/08/12 14:14:15 chris Exp $";
 unsigned char *find_http_req(const unsigned char *data, const size_t len, unsigned char **http, size_t *httplen) {
     unsigned char *req, *le, *blankline, *hosthdr;
     
-#define remaining(x)    (len - (data - (x)))
+#define remaining(x)    (len + data - (x))
 #define MAX_REQ         16384
     
     /* HTTP requests look like:
@@ -71,7 +71,7 @@ unsigned char *find_http_req(const unsigned char *data, const size_t len, unsign
     }
 
     if (memcmp(req + 4, "http://", 7) == 0
-        && memcmp(req + 5, "http://", 7) == 0)
+        || memcmp(req + 5, "http://", 7) == 0)
         /* Probably a cache request; in any case, don't need to look for a Host:. */
         goto found;
 
